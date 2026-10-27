@@ -229,7 +229,9 @@ def run(
     _ensure_dirs(db_path, out_dir)
     dataframe = _clean(_read_excel(excel_path, sheet))
     if dataframe.empty:
-        raise ValueError("No valid sales rows remain after cleaning the input workbook.")
+        raise ValueError(
+            "No valid sales rows remain after cleaning the input workbook."
+        )
 
     with sqlite3.connect(db_path) as connection:
         _build_star_schema(dataframe, connection)
@@ -237,8 +239,12 @@ def run(
             frames = _run_multi_select(connection, sql_file.read())
 
     artifacts = _save_kpis(frames, out_dir)
-    artifacts["chart_ventas_mes"] = _chart_ventas_por_mes(artifacts["ventas_mes"], out_dir)
-    artifacts["chart_top_prod"] = _chart_top_productos(artifacts["top_prod"], out_dir)
+    artifacts["chart_ventas_mes"] = _chart_ventas_por_mes(
+        artifacts["ventas_mes"], out_dir
+    )
+    artifacts["chart_top_prod"] = _chart_top_productos(
+        artifacts["top_prod"], out_dir
+    )
 
     metadata = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
