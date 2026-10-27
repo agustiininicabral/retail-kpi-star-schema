@@ -242,9 +242,7 @@ def run(
     artifacts["chart_ventas_mes"] = _chart_ventas_por_mes(
         artifacts["ventas_mes"], out_dir
     )
-    artifacts["chart_top_prod"] = _chart_top_productos(
-        artifacts["top_prod"], out_dir
-    )
+    artifacts["chart_top_prod"] = _chart_top_productos(artifacts["top_prod"], out_dir)
 
     metadata = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
