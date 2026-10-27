@@ -26,7 +26,18 @@ def _ensure_dirs(db_path: str, out_dir: str) -> None:
 
 def _read_excel(path: str, sheet: str | int) -> pd.DataFrame:
     dataframe = pd.read_excel(path, sheet_name=sheet, engine="openpyxl")
-    dataframe.columns = [str(column).strip().lower() for column in dataframe.columns]
+    columns = [str(column).strip().lower() for column in dataframe.columns]
+    duplicates = sorted({column for column in columns if columns.count(column) > 1})
+    if duplicates:
+        raise ValueError(
+            "Duplicate column names after normalization: " + ", ".join(duplicates)
+        )
+    reserved = {"source_excel_row", "rejection_reasons"} & set(columns)
+    if reserved:
+        raise ValueError(
+            "Input uses reserved audit column names: " + ", ".join(sorted(reserved))
+        )
+    dataframe.columns = columns
     missing = [column for column in REQUIRED_COLS if column not in dataframe.columns]
     if missing:
         raise ValueError(
@@ -35,24 +46,58 @@ def _read_excel(path: str, sheet: str | int) -> pd.DataFrame:
     return dataframe
 
 
-def _clean(dataframe: pd.DataFrame) -> pd.DataFrame:
-    cleaned = dataframe.dropna(how="all").copy()
-    cleaned["fecha"] = pd.to_datetime(cleaned["fecha"], errors="coerce")
+def _clean_with_rejections(
+    dataframe: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Return normalized valid rows and an audit table for rejected non-empty rows."""
+    source = dataframe.dropna(how="all").copy()
+    if source.empty:
+        rejected = source.copy()
+        rejected.insert(0, "source_excel_row", pd.Series(dtype="int64"))
+        rejected["rejection_reasons"] = pd.Series(dtype="string")
+        return source, rejected
 
+    cleaned = source.copy()
+    cleaned["fecha"] = pd.to_datetime(cleaned["fecha"], errors="coerce")
     for column in ("cantidad", "precio_unitario", "costo_unitario"):
         cleaned[column] = pd.to_numeric(cleaned[column], errors="coerce")
-
     for column in ("cliente", "producto"):
         cleaned[column] = cleaned[column].astype("string").str.strip()
         cleaned[column] = cleaned[column].replace("", pd.NA)
 
-    cleaned = cleaned.dropna(subset=list(REQUIRED_COLS))
-    cleaned = cleaned[
-        (cleaned["cantidad"] > 0)
-        & (cleaned["precio_unitario"] >= 0)
-        & (cleaned["costo_unitario"] >= 0)
+    reasons_by_index: dict[Any, list[str]] = {index: [] for index in cleaned.index}
+    for index, row in cleaned.iterrows():
+        if pd.isna(row["fecha"]):
+            reasons_by_index[index].append("fecha_missing_or_invalid")
+        for column in ("cliente", "producto"):
+            if pd.isna(row[column]):
+                reasons_by_index[index].append(f"{column}_missing_or_blank")
+        for column in ("cantidad", "precio_unitario", "costo_unitario"):
+            if pd.isna(row[column]):
+                reasons_by_index[index].append(f"{column}_missing_or_non_numeric")
+        if not pd.isna(row["cantidad"]) and row["cantidad"] <= 0:
+            reasons_by_index[index].append("cantidad_not_positive")
+        if not pd.isna(row["precio_unitario"]) and row["precio_unitario"] < 0:
+            reasons_by_index[index].append("precio_unitario_negative")
+        if not pd.isna(row["costo_unitario"]) and row["costo_unitario"] < 0:
+            reasons_by_index[index].append("costo_unitario_negative")
+
+    valid_indices = [
+        index for index, reasons in reasons_by_index.items() if not reasons
     ]
-    return cleaned
+    rejected_indices = [index for index, reasons in reasons_by_index.items() if reasons]
+    valid = cleaned.loc[valid_indices].copy()
+    rejected = source.loc[rejected_indices].copy()
+    rejected.insert(0, "source_excel_row", [int(index) + 2 for index in rejected.index])
+    rejected["rejection_reasons"] = [
+        ";".join(reasons_by_index[index]) for index in rejected.index
+    ]
+    return valid, rejected
+
+
+def _clean(dataframe: pd.DataFrame) -> pd.DataFrame:
+    """Compatibility helper returning only valid rows."""
+    return _clean_with_rejections(dataframe)[0]
 
 
 def _build_star_schema(dataframe: pd.DataFrame, connection: sqlite3.Connection) -> None:
@@ -205,11 +250,13 @@ def _write_report_md(
         f"- Generated at: **{meta['generated_at']}**",
         f"- Source Excel: **{meta['excel_path']}**",
         f"- Rows processed: **{meta['rows']}**",
+        f"- Rows rejected: **{meta['rows_rejected']}**",
         f"- SQLite DB: **{meta['db_path']}**",
         "",
         "## Artifacts",
         f"- KPIs Excel: `{os.path.basename(artifacts['kpis_xlsx'])}`",
         f"- KPIs Summary CSV: `{os.path.basename(artifacts['summary_csv'])}`",
+        f"- Rejected rows audit: `{os.path.basename(artifacts['rejected_rows_csv'])}`",
         "- Charts:",
         f"  - `charts/{os.path.basename(artifacts['chart_ventas_mes'])}`",
         f"  - `charts/{os.path.basename(artifacts['chart_top_prod'])}`",
@@ -227,10 +274,14 @@ def run(
     out_dir: str,
 ) -> None:
     _ensure_dirs(db_path, out_dir)
-    dataframe = _clean(_read_excel(excel_path, sheet))
+    raw_dataframe = _read_excel(excel_path, sheet)
+    dataframe, rejected = _clean_with_rejections(raw_dataframe)
+    rejected_path = os.path.join(out_dir, "rejected_rows.csv")
+    rejected.to_csv(rejected_path, index=False, encoding="utf-8")
     if dataframe.empty:
         raise ValueError(
-            "No valid sales rows remain after cleaning the input workbook."
+            "No valid sales rows remain after cleaning the input workbook. "
+            f"Rejected-row audit: {rejected_path}"
         )
 
     with sqlite3.connect(db_path) as connection:
@@ -248,8 +299,10 @@ def run(
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "excel_path": excel_path,
         "rows": int(len(dataframe)),
+        "rows_rejected": int(len(rejected)),
         "db_path": db_path,
     }
+    artifacts["rejected_rows_csv"] = rejected_path
     _write_report_md(metadata, out_dir, artifacts)
 
     print("OK - Retail KPI pipeline finished")

@@ -28,7 +28,8 @@ El pipeline genera:
 - `data/warehouse.db`: tablas `dim_date`, `dim_product`, `dim_customer` y `fact_sales`.
 - `outputs/kpis.xlsx`: totales, ticket, ventas mensuales, top productos y top clientes.
 - `outputs/kpis_summary.csv`: resumen de KPIs.
-- `outputs/REPORT.md`: metadatos y lista de artefactos.
+- `outputs/REPORT.md`: metadatos, conteo de filas rechazadas y lista de artefactos.
+- `outputs/rejected_rows.csv`: filas descartadas con número de fila y motivo de rechazo.
 - `outputs/charts/ventas_por_mes.png` y `outputs/charts/top_productos.png`.
 
 La base y los archivos generados se excluyen de Git.
@@ -37,7 +38,7 @@ La base y los archivos generados se excluyen de Git.
 
 Los nombres de columnas se normalizan a minúsculas y se eliminan espacios exteriores. Se descartan filas completamente vacías, fechas inválidas, campos críticos nulos o vacíos, valores numéricos no interpretables, cantidades no positivas y precios/costos negativos. Si no queda ninguna fila válida, el proceso termina con un error explícito y no genera KPIs vacíos.
 
-Las filas descartadas no se escriben en el modelo estrella. Revisá el Excel de entrada y validá las exclusiones antes de utilizar los resultados para decisiones comerciales.
+Las filas descartadas no se escriben en el modelo estrella. Se conserva una auditoría local en `outputs/rejected_rows.csv`, con el número de fila de Excel y códigos de motivo (fecha inválida, campos faltantes, valores numéricos no interpretables o rangos inválidos). Revisá el archivo antes de utilizar los resultados para decisiones comerciales; puede contener datos originales y no debe publicarse si el Excel contiene información sensible.
 
 ## Pruebas y controles de calidad
 
