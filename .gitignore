@@ -5,3 +5,4 @@ venv/
 outputs/
 data/*.db
 .DS_Store
+.ruff_cache/

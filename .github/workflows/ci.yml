@@ -1,31 +1,50 @@
-name: Retail KPI Star Schema (Python)
+name: Retail KPI Star Schema
 
 on:
   push:
   pull_request:
 
-jobs:
-  run:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+permissions:
+  contents: read
 
-      - name: Setup Python
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
 
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Check dependency consistency
+        run: python -m pip check
+
+      - name: Check Python formatting
+        run: ruff format --check retail_kpi tests
+
+      - name: Run Ruff lint checks
+        run: ruff check retail_kpi tests
+
+      - name: Run pipeline tests
+        run: python -m pytest -q
 
       - name: Run demo
-        run: |
-          python -m retail_kpi run --excel examples/ventas_retail_demo.xlsx --sheet Ventas
+        run: python -m retail_kpi run --excel examples/ventas_retail_demo.xlsx --sheet Ventas
 
       - name: Upload outputs
+        if: always() && hashFiles('outputs/*') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: outputs
-          path: outputs
+          name: retail-kpi-results
+          path: outputs/
+          if-no-files-found: warn
+          retention-days: 7
