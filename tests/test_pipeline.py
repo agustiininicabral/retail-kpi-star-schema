@@ -138,7 +138,9 @@ def test_pipeline_rejects_when_no_valid_sales_rows_remain(tmp_path: Path) -> Non
 
 
 def test_clean_with_rejections_returns_valid_rows_and_reason_codes() -> None:
-    cleaned, rejected = _clean_with_rejections(_sample_sales())
+    source = _sample_sales()
+    source.columns = [str(column).strip().lower() for column in source.columns]
+    cleaned, rejected = _clean_with_rejections(source)
 
     assert len(cleaned) == 2
     assert len(rejected) == 2
