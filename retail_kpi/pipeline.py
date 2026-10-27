@@ -29,7 +29,9 @@ def _read_excel(path: str, sheet: str | int) -> pd.DataFrame:
     columns = [str(column).strip().lower() for column in dataframe.columns]
     duplicates = sorted({column for column in columns if columns.count(column) > 1})
     if duplicates:
-        raise ValueError("Duplicate column names after normalization: " + ", ".join(duplicates))
+        raise ValueError(
+            "Duplicate column names after normalization: " + ", ".join(duplicates)
+        )
     reserved = {"source_excel_row", "rejection_reasons"} & set(columns)
     if reserved:
         raise ValueError(
@@ -80,7 +82,9 @@ def _clean_with_rejections(
         if not pd.isna(row["costo_unitario"]) and row["costo_unitario"] < 0:
             reasons_by_index[index].append("costo_unitario_negative")
 
-    valid_indices = [index for index, reasons in reasons_by_index.items() if not reasons]
+    valid_indices = [
+        index for index, reasons in reasons_by_index.items() if not reasons
+    ]
     rejected_indices = [index for index, reasons in reasons_by_index.items() if reasons]
     valid = cleaned.loc[valid_indices].copy()
     rejected = source.loc[rejected_indices].copy()
