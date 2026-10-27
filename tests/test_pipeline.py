@@ -74,9 +74,13 @@ def test_pipeline_builds_star_schema_kpis_and_charts(tmp_path: Path) -> None:
 
     with sqlite3.connect(database) as connection:
         assert connection.execute("SELECT COUNT(*) FROM fact_sales").fetchone()[0] == 2
-        assert connection.execute("SELECT COUNT(*) FROM dim_customer").fetchone()[0] == 2
+        assert (
+            connection.execute("SELECT COUNT(*) FROM dim_customer").fetchone()[0] == 2
+        )
         assert connection.execute("SELECT COUNT(*) FROM dim_product").fetchone()[0] == 2
-        total_sales = connection.execute("SELECT SUM(venta) FROM fact_sales").fetchone()[0]
+        total_sales = connection.execute(
+            "SELECT SUM(venta) FROM fact_sales"
+        ).fetchone()[0]
         assert total_sales == 250
 
     with pd.ExcelFile(output / "kpis.xlsx") as workbook:
