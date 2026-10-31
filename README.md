@@ -26,11 +26,13 @@ py -3.12 -m venv .venv
 El pipeline genera:
 
 - `data/warehouse.db`: tablas `dim_date`, `dim_product`, `dim_customer` y `fact_sales`.
-- `outputs/kpis.xlsx`: totales, ticket, ventas mensuales, top productos y top clientes.
+- `outputs/kpis.xlsx`: totales, venta promedio por registro, ventas mensuales, top productos y top clientes.
 - `outputs/kpis_summary.csv`: resumen de KPIs.
 - `outputs/REPORT.md`: metadatos, conteo de filas rechazadas y lista de artefactos.
 - `outputs/rejected_rows.csv`: filas descartadas con número de fila y motivo de rechazo.
 - `outputs/charts/ventas_por_mes.png` y `outputs/charts/top_productos.png`.
+
+**Interpretación del KPI:** la hoja `Ticket` calcula el promedio de `cantidad × precio_unitario` por fila del Excel. Como el archivo de entrada no contiene un identificador de pedido, este valor no representa necesariamente el ticket promedio por orden de compra. No debe compararse con un AOV (average order value) real sin incorporar primero un identificador de pedido y agrupar las líneas por orden.
 
 La base y los archivos generados se excluyen de Git.
 
