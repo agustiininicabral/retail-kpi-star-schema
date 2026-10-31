@@ -14,13 +14,13 @@ Desde la raíz del repositorio:
 
 ```powershell
 py -3.12 -m venv .venv
-.\\.venv\\Scripts\\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 ```
 
 ## Ejecutar la demo
 
 ```powershell
-.\\.venv\\Scripts\\python.exe -m retail_kpi run --excel examples/ventas_retail_demo.xlsx --sheet Ventas
+.\.venv\Scripts\python.exe -m retail_kpi run --excel examples/ventas_retail_demo.xlsx --sheet Ventas
 ```
 
 El pipeline genera:
@@ -45,10 +45,10 @@ Las filas descartadas no se escriben en el modelo estrella. Se conserva una audi
 ## Pruebas y controles de calidad
 
 ```powershell
-.\\.venv\\Scripts\\python.exe -m pip check
-.\\.venv\\Scripts\\python.exe -m ruff format --check retail_kpi tests
-.\\.venv\\Scripts\\python.exe -m ruff check retail_kpi tests
-.\\.venv\\Scripts\\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\Scripts\python.exe -m ruff format --check retail_kpi tests
+.\.venv\Scripts\python.exe -m ruff check retail_kpi tests
+.\.venv\Scripts\python.exe -m pytest -q
 ```
 
 Las pruebas crean un Excel temporal con datos válidos e inválidos y comprueban el modelo estrella, las salidas, los gráficos, la limpieza y el manejo de columnas faltantes. GitHub Actions ejecuta estas pruebas y la demo de extremo a extremo; los resultados se publican como artefactos temporales.
