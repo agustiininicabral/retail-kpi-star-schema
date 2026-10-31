@@ -14,23 +14,25 @@ Desde la raíz del repositorio:
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\\.venv\\Scripts\\python.exe -m pip install -r requirements-dev.txt
 ```
 
 ## Ejecutar la demo
 
 ```powershell
-.\.venv\Scripts\python.exe -m retail_kpi run --excel examples/ventas_retail_demo.xlsx --sheet Ventas
+.\\.venv\\Scripts\\python.exe -m retail_kpi run --excel examples/ventas_retail_demo.xlsx --sheet Ventas
 ```
 
 El pipeline genera:
 
 - `data/warehouse.db`: tablas `dim_date`, `dim_product`, `dim_customer` y `fact_sales`.
-- `outputs/kpis.xlsx`: totales, ticket, ventas mensuales, top productos y top clientes.
+- `outputs/kpis.xlsx`: totales, venta promedio por registro, ventas mensuales, top productos y top clientes.
 - `outputs/kpis_summary.csv`: resumen de KPIs.
 - `outputs/REPORT.md`: metadatos, conteo de filas rechazadas y lista de artefactos.
 - `outputs/rejected_rows.csv`: filas descartadas con número de fila y motivo de rechazo.
 - `outputs/charts/ventas_por_mes.png` y `outputs/charts/top_productos.png`.
+
+**Interpretación del KPI:** la hoja `Ticket` calcula el promedio de `cantidad × precio_unitario` por fila del Excel. Como el archivo de entrada no contiene un identificador de pedido, este valor no representa necesariamente el ticket promedio por orden de compra. No debe compararse con un AOV (average order value) real sin incorporar primero un identificador de pedido y agrupar las líneas por orden.
 
 La base y los archivos generados se excluyen de Git.
 
@@ -43,10 +45,10 @@ Las filas descartadas no se escriben en el modelo estrella. Se conserva una audi
 ## Pruebas y controles de calidad
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip check
-.\.venv\Scripts\python.exe -m ruff format --check retail_kpi tests
-.\.venv\Scripts\python.exe -m ruff check retail_kpi tests
-.\.venv\Scripts\python.exe -m pytest -q
+.\\.venv\\Scripts\\python.exe -m pip check
+.\\.venv\\Scripts\\python.exe -m ruff format --check retail_kpi tests
+.\\.venv\\Scripts\\python.exe -m ruff check retail_kpi tests
+.\\.venv\\Scripts\\python.exe -m pytest -q
 ```
 
 Las pruebas crean un Excel temporal con datos válidos e inválidos y comprueban el modelo estrella, las salidas, los gráficos, la limpieza y el manejo de columnas faltantes. GitHub Actions ejecuta estas pruebas y la demo de extremo a extremo; los resultados se publican como artefactos temporales.
